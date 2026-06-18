@@ -1,5 +1,6 @@
 package com.diyalo.mangoDiyalo.Service;
 
+import com.diyalo.mangoDiyalo.Dto.ApiResponse;
 import com.diyalo.mangoDiyalo.Dto.AuthenticationResponse;
 import com.diyalo.mangoDiyalo.Dto.LoginRequest;
 import com.diyalo.mangoDiyalo.Dto.RegisterRequest;
@@ -8,6 +9,7 @@ import com.diyalo.mangoDiyalo.Entities.User;
 import com.diyalo.mangoDiyalo.Exception.EmailAlreadyUsedException;
 import com.diyalo.mangoDiyalo.Repository.UserRepository;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -36,7 +38,7 @@ public class AuthenticationService {
     }
 
     @Transactional
-    public AuthenticationResponse register(RegisterRequest request) {
+    public ResponseEntity<?> register(RegisterRequest request) {
         String email = normalizeEmail(request.getEmail());
 
         if (userRepository.findByEmail(email).isPresent()) {
@@ -57,10 +59,10 @@ public class AuthenticationService {
             throw new EmailAlreadyUsedException("An account with this email already exists");
         }
 
-        return buildResponse(user);
+        return ApiResponse.created("Account created successfully", buildAuthPayload(user));
     }
 
-    public AuthenticationResponse login(LoginRequest request) {
+    public ResponseEntity<?> login(LoginRequest request) {
         String email = normalizeEmail(request.getEmail());
 
         // Throws BadCredentialsException on failure (handled by the global exception handler).
@@ -71,10 +73,10 @@ public class AuthenticationService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-        return buildResponse(user);
+        return ApiResponse.ok("Login successful", buildAuthPayload(user));
     }
 
-    private AuthenticationResponse buildResponse(User user) {
+    private AuthenticationResponse buildAuthPayload(User user) {
         return AuthenticationResponse.builder()
                 .token(jwtService.generateToken(user))
                 .tokenType("Bearer")
